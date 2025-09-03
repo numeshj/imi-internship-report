@@ -32,15 +32,15 @@ const AssignmentsIndex = () => {
                         placeholder="Search title / logic / concept..."
                         value={query}
                         onChange={e => setQuery(e.target.value)}
-                        className="ui-input" style={{ flex: '1 1 320px' }}
+                        className="ui-input flex-grow" data-testid="assignments-search"
                     />
                     <select value={conceptFilter} onChange={e => setConceptFilter(e.target.value)}
-                        className="ui-select" style={{ flex: '0 0 240px' }}>
+                        className="ui-select" data-testid="concept-filter">
                         <option value="">All Concepts</option>
                         {conceptsSet.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                     {conceptFilter && (
-                        <button onClick={() => setConceptFilter('')} className="badge" style={{ cursor: 'pointer' }}>Clear</button>
+                        <button onClick={() => setConceptFilter('')} className="badge button-like" data-testid="clear-concept">Clear</button>
                     )}
                 </div>
                 <div className="dashboard-cards assignments-grid">

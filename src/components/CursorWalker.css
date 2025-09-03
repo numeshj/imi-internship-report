@@ -1,4 +1,5 @@
-@media (pointer:fine){ * { cursor:none !important; } }
+/* Disabled custom cursor hiding (restoring system cursor) */
+/* @media (pointer:fine){ * { cursor:none !important; } } */
 
 .cursor-arrow-wrapper { position:fixed; inset:0; pointer-events:none; z-index:9999; }
 .cursor-arrow { position:absolute; width:64px; height:64px; transform:translate(-50%, -60%); filter:drop-shadow(0 6px 14px rgba(0,0,0,.55)); transition:filter .3s ease; }

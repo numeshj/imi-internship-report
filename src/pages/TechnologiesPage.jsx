@@ -27,12 +27,12 @@ const TechnologiesPage = () => {
     <div className="dashboard-container tech-page">
       <h2>Technologies & Libraries <span style={{fontSize:'0.55em',color:'var(--text-dim)'}}>{filtered.length}/{flatList.length}</span></h2>
       <div className="tech-filters">
-        <input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search..." style={{flex:'1 1 260px'}} />
-        <select value={groupFilter} onChange={e=>setGroupFilter(e.target.value)} style={{flex:'0 0 220px'}}>
+        <input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search..." className="ui-input" data-testid="tech-search" />
+        <select value={groupFilter} onChange={e=>setGroupFilter(e.target.value)} className="ui-select" data-testid="tech-group">
           <option value="">All Categories</option>
           {groups.map(g => <option key={g} value={g}>{g}</option>)}
         </select>
-        {groupFilter && <button onClick={()=> setGroupFilter('')}>Clear</button>}
+        {groupFilter && <button onClick={()=> setGroupFilter('')} className="badge button-like" data-testid="tech-clear">Clear</button>}
       </div>
       <div className="tech-grid">
         <AnimatePresence mode="popLayout">

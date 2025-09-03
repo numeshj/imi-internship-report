@@ -17,7 +17,7 @@ const PatternsPage = () => {
             <motion.div key={p.name} layout initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{delay:i*0.02}} className={`dashboard-card pattern-card ${isOpen?'open':''}`} style={{border:isOpen?'1px solid var(--accent)':'1px solid var(--border-color)'}} onClick={()=> setOpen(isOpen?null:i)}>
               <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:20}}>
                 <h3>{p.name}</h3>
-                <span className="badge" style={{background:isOpen?'var(--accent)':'var(--card-bg)',color:isOpen?'#111':'var(--text-color)'}}>{isOpen ? 'Close' : 'View'}</span>
+                <span className={`badge ${isOpen?'open':''}`}>{isOpen ? 'Close' : 'View'}</span>
               </div>
               <p>{p.description}</p>
               <AnimatePresence>{isOpen && (

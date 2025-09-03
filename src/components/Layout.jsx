@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import './Dashboard.css';
-import CursorWalker from './CursorWalker';
 
 // Persistent layout hosting the global navigation + theme toggle
 const Layout = () => {
@@ -25,8 +24,7 @@ const Layout = () => {
   ];
 
   return (
-    <div className="app-shell">
-      <CursorWalker />
+  <div className="app-shell">
       <header className="dashboard-header">
         <div className="dashboard-header-row">
           <div className="site-title-wrap">
