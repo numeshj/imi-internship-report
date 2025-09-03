@@ -1,0 +1,71 @@
+/* Assignments Page Specific Styles */
+.assignments-page {
+  padding: 120px clamp(28px,4vw,52px) 140px;
+  width: 100%;
+}
+
+.assignments-inner {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.assignments-title {
+  margin-top: 0;
+  font-size: clamp(1.9rem,3.2vw,2.6rem);
+  font-weight: 600;
+  letter-spacing: .5px;
+}
+
+.assignments-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 18px;
+  align-items: center;
+}
+
+.assignments-grid {
+  margin-top: 34px;
+}
+
+.assignment-card h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  line-height: 1.25;
+}
+
+.assignment-card p {
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.assignment-meta { 
+  margin-top: auto; 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+}
+
+.assignment-meta a { 
+  color: var(--accent); 
+  font-size: 0.85rem; 
+  text-decoration: none; 
+  font-weight: 500; 
+}
+
+.assignment-tags { 
+  display:flex; 
+  flex-wrap:wrap; 
+  gap:6px; 
+  margin:8px 0; 
+}
+
+.assignment-tags .tag, .assignment-tags .badge { font-size: 0.65rem; }
+
+@media (max-width: 780px) {
+  .assignments-page { padding: 110px 24px 120px; }
+  .assignment-card h3 { font-size: 1.05rem; }
+  .assignment-card p { font-size: 0.85rem; }
+  .assignments-grid { margin-top: 28px; }
+}

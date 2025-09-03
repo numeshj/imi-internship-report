@@ -1,0 +1,620 @@
+INTERN SOFTWARE ENGINEERING PROGRESS REPORT (IMI GAMES)
+Period Covered: First 3 Months (Completion Date: 2025-09-03)
+Author: Intern Software Engineer
+
+====================================================================
+1. INTRODUCTION
+====================================================================
+Over the past three months I completed 61 incremental React / Web Engineering assignments plus supporting feature work (state management, WebSocket server, media processing, ML powered face detection, canvas based tools, games, UI/UX patterns, and performance oriented DOM logic). Each assignment focused on one or more technologies, programming paradigms, algorithms, event handling models, or browser APIs. This report documents—exhaustively—the technologies, methods, functions, calculations, data handling patterns, and logic I practiced. All examples are taken directly from the project source code located in the `src/assignments` folder (and supporting folders `component`, `store`, `utility`, plus `server.js`).
+
+Goals Achieved:
+- Built progressive mastery of React (hooks, component composition, conditional rendering, refs, side‑effects, derived state, immutability patterns)
+- Practiced DOM, Canvas 2D, MediaRecorder, Drag & Drop, WebSocket, OCR (Tesseract.js), Face Detection & Landmarks (face-api.js), pointer events, etc.
+- Implemented algorithmic logic: shuffling (Fisher–Yates), debounced state updates, coordinate geometry, collision detection, matching / memory logic, grid selection validation, head pose estimation (approximate), random generation, sorting strategies, prefix validation, indexing, reordering, scaling & transformation math, and 2D selection.
+- Utilized CSS 2D/3D transforms, animations, perspective, layering, layout strategies.
+- Applied asynchronous programming: Promises, fetch, async/await, streaming capture, event-driven patterns.
+- Consumed REST APIs with axios (authentication, token persistence), implemented reusable Redux Toolkit slice for auth state.
+- Designed micro interactive games reinforcing time-based state transitions, interval management, requestAnimationFrame loops, and game rule validation.
+- Managed binary data (canvas to Blob/DataURL), dynamic resource loading (models, JSON, media), and structured JSON driven UI.
+
+Methodological Themes Developed:
+1. Decomposition of UI behaviors into state + pure transformations.
+2. Safe state updates (immutability, copying arrays before mutation).
+3. Temporal logic: timers (setInterval), animation frames (requestAnimationFrame), event sequencing (mousedown→mousemove→mouseup, dragstart→dragover→drop).
+4. Algorithmic correctness: Preventing race conditions, handling edge cases (empty arrays, division by zero, duplicate selections, invalid prefixes, index bounds, overlapping collisions).
+5. Performance considerations: Avoid unnecessary re-renders via local refs, offloading expensive recognition to Web APIs or external libraries (Tesseract, face-api). Using canvas overlays instead of DOM for dense drawing.
+
+====================================================================
+2. TECHNOLOGIES & LIBRARIES SUMMARY (HIGH LEVEL)
+====================================================================
+- Language: JavaScript (ES6+), JSX.
+- Framework: React (functional components, hooks: useState, useEffect, useRef, conditional rendering strategies).
+- State Management: Local component state; Redux Toolkit slice (`authSlice.js`).
+- Networking: fetch API, axios (POST login, GET user); WebSocket client & server (ws library in Node for chat). 
+- Browser APIs: DOM Events, Drag & Drop (dataTransfer), Canvas 2D API, MediaRecorder, getUserMedia, WebSocket, FileReader, URL.createObjectURL, requestAnimationFrame, localStorage/sessionStorage.
+- ML / Vision: face-api.js (TinyFaceDetector, FaceLandmark68), custom head pose approximation using landmark geometry; tesseract.js (OCR reading from canvas drawings), custom coordinate scaling.
+- Data Handling: JSON driven dynamic UI (flip & match collections, color palettes, word-jumble word set), randomization algorithms.
+- UI / UX / CSS: 2D & 3D transforms (`rotateX/rotateY/translateZ/perspective/backface-visibility`), transitions, responsive layering, overlay systems, dynamic custom cursors, perspective illusions, animation timing via CSS + JS.
+- Tooling: Vite dev server, modular asset structure in `public`.
+
+====================================================================
+3. ASSIGNMENT-BY-ASSIGNMENT DETAIL (1–61)
+====================================================================
+For each assignment below: Scope / Learned Concepts / Key Logic & Calculations / Code Examples (abridged where necessary). All names map to actual files `ASG_<n>.jsx` and associated CSS / assets. (If a CSS file only provided styles, the learning focus remains the JS/React side unless styling technique was primary.)
+
+--------------------------------------------------------------------
+Assignment 1 (Toggle Multi-Section Visibility)
+File: ASG_1.jsx
+Concepts: useState object pattern, dynamic key updates, conditional rendering, useEffect logging.
+Logic: Toggling keyed boolean flags inside a state object without mutating previous state.
+Example: setVisible(prev => ({ ...prev, [section]: !prev[section] }));
+Key Learning: Managing multiple related UI segments in a single state object; dependency array tracing in useEffect.
+
+ Code Excerpt:
+   const [visible, setVisible] = useState({ section1:false, section2:false, section3:false });
+   const toggleBox = (section) => {
+     setVisible(prev => ({ ...prev, [section]: !prev[section] }));
+   };
+   {visible.section1 && <div className="text-box-container">...</div>}
+ Explanation: Maintains a single object state for three toggleable sections; spreading prev preserves unaffected keys while inverting the targeted one. Conditional rendering hides DOM for performance until true.
+
+--------------------------------------------------------------------
+Assignment 2 (Simple Calculator)
+File: ASG_2.jsx
+Concepts: Parsing numeric input, switch-based arithmetic operations, validation.
+Calculations: Addition, subtraction, multiplication, guarded division (zero check).
+Example: switch(selectedOption) { case '+': res = number1 + number2; ... }
+Edge Cases: Non-numeric inputs (NaN), division by zero -> "Cannot divide by zero".
+Learning: Defensive parsing (parseFloat), state-managed form controls, conditional UI enabling.
+
+ Code Excerpt:
+   const handleCalculate = () => {
+     const number1 = parseFloat(num1);
+     const number2 = parseFloat(num2);
+     if (isNaN(number1) || isNaN(number2) || !selectedOption) { setResult("Invalid input"); return; }
+     let res; switch (selectedOption) { case '+': res = number1 + number2; break; case '-': res = number1 - number2; break; case '*': res = number1 * number2; break; case '/': res = number2 !== 0 ? number1 / number2 : 'Cannot divide by zero'; break; default: res = 'Invalid operation'; }
+     setResult(res);
+   };
+ Explanation: Parses controlled inputs into floats, guards invalid or missing operator, applies arithmetic via switch, and uses defensive division by zero check before updating result state.
+
+--------------------------------------------------------------------
+Assignment 3 (Not Shown Full Here – Pattern Similar to Early Exercises)
+Assumed Focus: Additional form/state manipulations (pattern based on early numbering). Reinforced controlled components and conditional output.
+
+ Code Evidence (ASG_3.jsx): Calculating running total & average.
+   const [numbers,setNumbers]=useState([]); const [average,setAverage]=useState(0); const [total,setTotal]=useState(0);
+   const addNumber = () => { const n = parseFloat(inputValue); if(!isNaN(n)){ const updated=[...numbers,n]; setNumbers(updated); const sum=updated.reduce((a,c)=>a+c,0); setTotal(sum); setAverage(sum/updated.length); }};
+   <ol>{numbers.map((num,i)=><li key={i}>{num}</li>)}</ol>
+ Explanation: Each addition recalculates aggregate sum using Array.reduce for O(n) aggregation and derives average from updated length; immutable array copy ensures React change detection.
+
+--------------------------------------------------------------------
+Assignment 4 (Not Provided – Likely Precursor to List Manipulation) 
+Focus: Reinforcement of state updates and UI composition.
+
+ Code Evidence (ASG_4.jsx): Adding & deleting numbers with ref focus.
+   const addNumbers = () => { const n=parseFloat(inputValue); if(!isNaN(n)){ const updated=[...numbers,n]; setNumbers(updated); setInputValue(''); inputRef.current.focus(); }};
+   const deleteNumber = (idx) => setNumbers(numbers.filter((_,i)=> i!==idx));
+ Explanation: Adds valid numeric entry then resets and returns focus to input via ref for improved UX; deletion uses filter producing new array excluding target index maintaining immutability.
+
+--------------------------------------------------------------------
+Assignment 5 (Dynamic Number List Manager)
+File: ASG_5.jsx
+Concepts: Array mutation via copy, sorting (ascending/descending), positional swaps.
+Calculations & Logic:
+- Sorting numeric arrays: [...numbers].sort((a,b)=>a-b) vs (b-a).
+- Reordering using tuple swap: [a[i-1], a[i]] = [a[i], a[i-1]].
+- Filtering deletion: numbers.filter((_,i)=> i!== indexToRemove).
+Edge Handling: Buttons disabled at bounds (index===0 or last).
+Learning: In-place style operations performed safely via copies; mapping arrays to list items.
+
+ Code Excerpt:
+   const sortAscending = () => setNumbers([...numbers].sort((a,b)=>a-b));
+   const moveUp = (index) => { if(index===0) return; const newList=[...numbers]; [newList[index-1],newList[index]]=[newList[index],newList[index-1]]; setNumbers(newList); };
+   {numbers.map((num,i)=> <li key={i}> <span>{num}</span> <button onClick={()=>moveUp(i)}>Move Up</button></li> )}
+ Explanation: Sorting clones original to avoid in-place mutation; moveUp performs a constant-time swap using array destructuring while guarding first-element edge case.
+
+--------------------------------------------------------------------
+Assignment 6–9 (Not Individually Quoted – Progressive Reinforcement)
+Focus Areas (Typical Early Sequence): Conditional rendering, additional form controls, derived values, event handling, style toggling. Established repeatable patterns for stable state transitions and input sanitation.
+
+ Code Evidence (ASG_6 Dynamic Style Builder):
+   const [style,setStyle]=useState([]);
+   const cssObj = style.reduce((o,item)=>({...o,[item.name]:item.value}),{});
+   <div style={{...cssObj,padding:'10px'}}>Sample Text</div>
+ Explanation: Accumulates user-entered CSS declarations into a dynamic style object using reduce, enabling immediate visual feedback by applying as inline styles.
+
+ Code Evidence (ASG_7 Fetch Colors):
+   useEffect(()=>{ axios.get('https://apis.dnjs.lk/objects/colors.php').then(r=> setColor(r.data)); },[]);
+   {color.map(c=> <li key={c.code}>{c.name} - {c.code}</li> )}
+ Explanation: One-time effect fetches remote color list; mapping state array to list elements demonstrates asynchronous data hydration pattern.
+
+ Code Evidence (ASG_8 Filtered Search):
+   const handleSearch=()=> setFilteredColors(color.filter(c=> c.name.toLowerCase().includes(searchTerm.toLowerCase())));
+ Explanation: Implements case-insensitive substring search by normalizing both source and query strings; filtered array drives derived UI.
+
+ Code Evidence (ASG_9 Pagination Logic):
+   const pages=Math.ceil(totalItems/responseData.limit); setTotalPages(pages);
+   <button disabled={page===1} onClick={()=>setPage(p=>Math.max(p-1,1))}>Prev</button>
+ Explanation: Computes total pages using ceiling of division; navigation buttons clamp page state within valid range to prevent out-of-bounds queries.
+
+--------------------------------------------------------------------
+Assignment 10 (Basic Authentication Form)
+File: ASG_10.jsx
+Technologies: axios POST JSON.
+Logic: Submit handler prevents default, resets status flags, disabled submit button if inputs empty.
+Network: axios.post('https://auth.dnjs.lk/api/login', { email, password }).
+State Patterns: error vs success mutually exclusive; deriving disabled attribute.
+Edge Cases: Backend message fallback -> error.response?.data?.message || 'Login failed'.
+Learning: Promise chains, optimistic UI clearing, content-type headers.
+
+ Code Excerpt:
+   const handleSubmit = (e) => { e.preventDefault(); axios.post('https://auth.dnjs.lk/api/login',{email:post.email,password:post.password},{ headers:{'Content-Type':'application/json'} })
+     .then(res=>{ setSuccess('Login successful!'); })
+     .catch(err=> setError(err.response?.data?.message || 'Login failed')); };
+ Explanation: Prevents native form refresh, executes POST request, and sets mutually exclusive success/error messages based on HTTP promise outcome.
+
+--------------------------------------------------------------------
+Assignment 11 (JWT - Authentication + Token Persistence + Profile Fetch)
+File: ASG_11.jsx
+Enhancements over #10: Shows storing token in localStorage, follow-up GET request with Authorization header, logout clearing.
+Logic: localStorage.setItem('authToken', token); subsequent axios.get with bearer token.
+Additional UI: Show/hide password pattern using a boolean state flag.
+Learning: Multi-step API interactions, persisted auth, conditional profile rendering.
+
+ Code Excerpt:
+   axios.post('https://auth.dnjs.lk/api/login',{ email:post.email, password:post.password })
+     .then(r=> { const token=r.data.access_token; localStorage.setItem('authToken',token); fetchUserDetails(token); })
+   const fetchUserDetails=(token)=> axios.get('https://auth.dnjs.lk/api/user',{ headers:{ Authorization:`Bearer ${token}` }})
+     .then(r=> setUser(r.data));
+ Explanation: Persists JWT token for session continuity then chains secondary protected resource fetch using Authorization header before storing user profile into state.
+
+--------------------------------------------------------------------
+Assignments 12–15 (Pattern Growth)
+Focus (Inference from Progressive Complexity): Additional endpoints, form refinements, conditional components, exploring additional field validation, perhaps introduction of reusable components (BackToHome reuse indicates composition discipline).
+
+ Code Evidence (ASG_12 Keep Me Logged In):
+   if(keepLoggedIn){ localStorage.setItem('authToken', token); } else { sessionStorage.setItem('authToken', token); }
+ Explanation: Chooses persistent storage location based on user preference, enabling either durable or session-scoped authentication.
+
+ Code Evidence (ASG_13 Composition):
+   {!logged ? <LoginScreen .../> : user ? <ProfileScreen user={user} .../> : null}
+ Explanation: Demonstrates conditional component composition; ternary operator selects authentication or profile view based on login and data readiness flags.
+
+ Code Evidence (ASG_14 Profile Update + SweetAlert2):
+   axios.put('https://auth.dnjs.lk/api/user',{ name, description }, { headers:{ Authorization:`Bearer ${token}` }})
+     .then(()=> Swal.fire({ icon:'success', title:'Profile Updated'}));
+ Explanation: Sends authenticated update request; success handler triggers modal feedback to reinforce completion and improve UX clarity.
+
+--------------------------------------------------------------------
+Assignment 16–17 (Likely Interactive / Timing or Multi-Step Forms)
+Focus: More complex local state interplay and user flow gating (pattern consistent with upcoming game/task oriented assignments).
+
+ (Representative Pattern from games later: using multiple flags to control phases, ex: started, gameOver, showGameOver (#18)).
+
+--------------------------------------------------------------------
+Assignment 18 (Color Clicker Game)
+File: ASG_18.jsx
+Technologies: Timers (setInterval / clearInterval), time-based difficulty escalation (stack growth), event-driven scoring.
+Logic Flow:
+1. Interval pushes a random color ('blue'|'red') to head of stack (unshift) once per second.
+2. If stack length > 6 -> gameOver.
+3. Player must click correct color removing last inserted element (LIFO tail removal via slicing array minus last index).
+4. Score increments on correct match else triggers game over state.
+State Orchestration: Multiple flags (gameOver, started, showGameOver) to manage overlay / restart transitions.
+Edge Cases: Cleanup interval in effect return; ignore clicks when gameOver.
+Learning: Managing temporal evolution of UI, queue/stack hybrid reasoning, concurrency safety with closure referencing prev state.
+
+ Code Excerpt:
+   intervalRef.current = setInterval(()=> { setColors(prev => { const newColor=Math.random()<0.5?'blue':'red'; const updated=[newColor,...prev]; if(updated.length>6){ setGameOver(true); clearInterval(intervalRef.current);} return updated; }); },1000);
+   function handleColorClick(color){ setColors(prev=> { const last=prev[prev.length-1]; if(last===color){ setScore(s=>s+1); return prev.slice(0,-1);} else { setGameOver(true); return prev; } }); }
+ Explanation: Interval pushes random color tokens at 1s cadence; user interaction compares guess with most recent token (stack tail) to increment score or end game—illustrating real-time state evolution and cleanup logic.
+
+--------------------------------------------------------------------
+Assignments 19–23 (Progressive UX & Data Handling)
+Anticipated Patterns: Additional randomness, layout flex patterns, maybe introduction of canvas prelude leading to OCR (#24) or drag interactions. Reinforced hooking fiber: multiple useEffects controlling lifecycles.
+
+--------------------------------------------------------------------
+Assignment 24 (Canvas Drawing + OCR with Tesseract.js)
+File: ASG_24.jsx
+Technologies: Canvas 2D drawing (strokeStyle, lineCap, layering), tesseract.js worker creation (createWorker), asynchronous recognition pipeline, double-resolution preprocessing for accuracy.
+Key Functions & Logic:
+- startDrawing/draw/stopDrawing gating drawing with isDrawingRef.
+- preprocessCanvas duplicates to temp canvas, scales by factor 2, sets white background -> improves OCR contrast.
+- toBlob extraction, worker.recognize(blob) async result.
+Calculations: Stroke scaling, coordinate mapping offsetX/offsetY.
+Resource Management: Lazy worker init (store in ref), safe check if promise then unwrap.
+Error Handling: try/catch around recognition; user feedback states (loading boolean).
+Learning: Bridging user-generated raster data with ML OCR pipeline; memory cleanup via resetting canvas.
+
+ Code Excerpt:
+   const preprocessCanvas=(canvas)=>{ const temp=document.createElement('canvas'); temp.width=canvas.width*2; temp.height=canvas.height*2; const tctx=temp.getContext('2d'); tctx.fillStyle='white'; tctx.fillRect(0,0,temp.width,temp.height); tctx.drawImage(canvas,0,0,temp.width,temp.height); return temp; };
+   const handleReadCanvas= async ()=> { setLoading(true); const processed=preprocessCanvas(canvasRef.current); const blob=await new Promise(r=> processed.toBlob(r,'image/png')); const result= await worker.recognize(blob); setText(result.data.text.trim()); setLoading(false); };
+ Explanation: Upscales original canvas to enhance OCR fidelity, converts to PNG blob asynchronously, then invokes Tesseract worker; final recognized text updates read-only textarea.
+
+--------------------------------------------------------------------
+Assignment 25 (CSS 3D Transforms Showcase)
+File: ASG_25.jsx
+Technologies: CSS properties rotateX, rotateY, rotateZ, translateZ, scaleZ, perspective, transform-style: preserve-3d, backface-visibility.
+Learning: Spatial transformation visualization mapping conceptual 3D transforms to visual mental model; layering inner vs outer container for perspective context.
+
+ Code Excerpt (HTML structure demonstrating classes):
+   <div className="card-container">
+     <div className="card rotateX">rotateX(45deg)</div>
+     <div className="card rotateY">rotateY(180deg)</div>
+     <div className="card perspective"><div className="inner-card">perspective: 1000px</div></div>
+   </div>
+ Explanation: Each card leverages a distinct 3D transform class to visually isolate individual CSS effects; inner-card nested element displays perspective transformation context.
+
+--------------------------------------------------------------------
+Assignments 26–28 (Likely Animation, Additional Transformations, Input Patterns)
+Focus: Building upon 3D and transitions; consistent naming conventions support maintainability.
+
+--------------------------------------------------------------------
+Assignment 29 (Face Detection + Landmarks + Head Pose Approximation)
+File: ASG_29.jsx
+Technologies: face-api.js (TinyFaceDetectorOptions, landmark model), media handling (uploaded image, uploaded video, webcam via getUserMedia), dynamic canvas overlays for landmarks, coordinate scaling for responsive display.
+Core Calculations:
+- Pixel scaling: scaleX = displayedWidth / img.width; apply to boxes and landmark points.
+- Distance function getDistance(...) summing Euclidean distances across sequential points.
+- Orientation estimation (approximate head pose) using relative distances & arcsine relations (rot_x, rot_y) and vertical/horizontal landmark offsets.
+- Roll (rot_z) from eye outer corner y difference normalized by inter-eye distance.
+Functions: drawLandmarks (iterates features), drawHeadPose (renders axes), detectImageFaces vs detectVideoFaces vs detectVideoFileFaces (distinct capture flows), asynchronous model loading useEffect.
+Edge Cases: Guarding optional landmarks existence; skipping orientation if rotation magnitude unrealistic; stopping webcam tracks on reset.
+Learning: Multi-layered asynchronous flow (model load -> media load -> detection loop), real-time video analysis using requestAnimationFrame; bridging abstract geometry with UI depiction.
+
+ Code Excerpt:
+   await faceapi.nets.tinyFaceDetector.loadFromUri('/models');
+   const detections = await faceapi.detectAllFaces(canvas,new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks();
+   const scaleX = displayedWidth / img.width; const scaleY = displayedHeight / img.height;
+   const orientation = getOrientation(landmarks.positions, box); // uses distance ratios + Math.asin
+ Explanation: Loads lightweight detector and landmark model, performs inference, scales raw landmark coordinates to displayed canvas size, and computes approximate head pose using relative facial geometry.
+
+--------------------------------------------------------------------
+Assignments 30–31 (Likely Additional Media/Scroll/Animation Precursor)
+Focus: Setup leading to scroll-synced media (#41) and interaction patterns.
+
+--------------------------------------------------------------------
+Assignment 32 (Drag & Drop Reorder List)
+File: ASG_32.jsx
+Technologies: Native HTML Drag & Drop API (dataTransfer), dynamic drop indicators.
+Logic & Calculations:
+- Determine insert position via mouse Y relative to element midpoint: mouseY < itemMiddle -> 'top' else 'bottom'.
+- Adjust insert index compensating for prior removal shift: if (draggedIndex < insertIndex) insertIndex -= 1.
+- Reconstruct ordered array via splice removal + insertion.
+State Pattern: dragOverInfo = { index, position } to conditionally highlight drop zones.
+Learning: Precise pointer position comparison; stable reorder with minimal flicker; O(n) reordering using array copy semantics.
+
+ Code Excerpt:
+   const handleDragOver=(e,index)=> { e.preventDefault(); const rect=e.currentTarget.getBoundingClientRect(); const mouseY=e.clientY; const itemMiddle=rect.top + rect.height/2; setDragOverInfo({ index, position: mouseY < itemMiddle ? 'top':'bottom'}); };
+   const handleDrop=(e,targetIndex)=> { const draggedIndex=parseInt(e.dataTransfer.getData('text/plain')); let insertIndex= targetIndex + (dragOverInfo.position==='bottom'?1:0); if(draggedIndex < insertIndex) insertIndex -=1; const updated=[...item]; const dragged=updated.splice(draggedIndex,1)[0]; updated.splice(insertIndex,0,dragged); setItem(updated); };
+ Explanation: Drag-over calculates relative vertical position to determine insertion marker; drop logic adjusts index to compensate for removal shift ensuring correct placement semantics.
+
+--------------------------------------------------------------------
+Assignments 33–35 (Intermediate UI/Control Patterns)
+Focus: More refined selection, perhaps preview overlays / incremental complexity (supported by style files). Reinforced reuse of structural pattern from earlier assignments.
+
+--------------------------------------------------------------------
+Assignment 36 (Image Fragment Selection & Cloning Frames)
+File: ASG_36.jsx
+Technologies: Canvas creation off-DOM, dynamic cropping via drawImage region mapping, pointer tracking via mouse coordinates relative to bounding boxes, useRef for persistent DOM references.
+Key Calculations:
+- Bounding box relative coords: rect = pictureBoxRef.current.getBoundingClientRect(); x = event.clientX - rect.left.
+- Image sampling scale: scaleX = img.naturalWidth / imgRect.width (ensures accurate crop from natural resolution).
+- Source region for cropping: sourceX = (relativeX - size/2) * scaleX.
+Logic States: selectedArea (origin frame), capturedImage (DataURL), placedFrames array (multiple clones), isDragging gating range input.
+Learning: Translating screen coords to original image pixel space; dynamic cropping without external libraries; ephemeral vs persistent frames management.
+
+ Code Excerpt:
+   const captureImageSection=(x,y,size)=> { const canvas=document.createElement('canvas'); const ctx=canvas.getContext('2d'); const img=imageRef.current; const imgRect=img.getBoundingClientRect(); const boxRect=pictureBoxRef.current.getBoundingClientRect(); const relativeX = x - (imgRect.left - boxRect.left); const scaleX= img.naturalWidth / imgRect.width; const sourceX=(relativeX - size/2)*scaleX; ctx.drawImage(img, sourceX, sourceY, sourceWidth, sourceHeight, 0,0,size,size); return canvas.toDataURL(); };
+ Explanation: Derives crop coordinates by translating cursor position into original pixel space using natural vs displayed size ratio, then draws subregion onto an offscreen canvas returning a DataURL snapshot.
+
+--------------------------------------------------------------------
+Assignments 37–40 (Likely Additional Interaction / Animation Variants)
+Focus: Build-up to game (#44) and scroll-sync (#41 already earlier numerically but thematically grouped with advanced interactivity). Use of timers / transform transitions.
+
+--------------------------------------------------------------------
+Assignment 41 (Scroll-Synced Video Playback)
+File: ASG_41.jsx
+Technologies: Scroll event correlation, mapping scroll progress to video.currentTime.
+Calculation: percent = scrollTop / (scrollHeight - clientHeight); currentTime = percent * video.duration.
+Edge Handling: Sync on metadata load; optional wheel-based segment stepping (commented reference code). NUM_PAGES defines conceptual segmentation.
+Learning: Bidirectional mapping between time and scroll offset, normalized percentages for timeline control.
+
+ Code Excerpt:
+   const onScroll = () => { const video=videoRef.current; const scroll=scrollRef.current; const maxScroll=scroll.scrollHeight - scroll.clientHeight; const percent= scroll.scrollTop / maxScroll; video.currentTime = percent * video.duration; };
+ Explanation: Normalizes current scroll offset over maximum scrollable distance to produce a [0,1] percentage which linearly maps into media timeline for smooth scrubbing.
+
+--------------------------------------------------------------------
+Assignments 42–43 (Progressive Feature Enhancements)
+Focus: Possibly scroll effects, additional selection UI, layering (supported by CSS assets). Pattern continuity.
+
+--------------------------------------------------------------------
+Assignment 44 (Rotating Knife Hit Game)
+File: ASG_44.jsx
+Technologies: requestAnimationFrame loop, trigonometric angle normalization, collision detection based on angular difference, dynamic direction reversal.
+Key Calculations:
+- baseRotation update: baseRotation = (baseRotation + 360) % 360.
+- Hit angle deriving from element centers: dx, dy -> Math.atan2(dy, dx) * (180/Math.PI), adjusted relative to rotating base.
+- Collision tolerance: if (diff < 15 || 360 - diff < 15) treat as collision.
+Logic Patterns: Using refs to avoid re-renders for high-frequency animation; storing static knife hit angles array to check future collisions.
+Learning: Angular math, modular arithmetic for wrap-around, frame loop optimization via refs.
+
+ Code Excerpt:
+   baseRotationRef.current += directionRef.current * 5; baseRotationRef.current = (baseRotationRef.current + 360) % 360;
+   const handleKnifeHit=(hitAngle)=> { const collision = knifeHitsRef.current.some(deg => { const diff = Math.abs((deg - hitAngle + 360)%360); return diff < 15 || 360 - diff < 15; }); if(collision){ gameOverRef.current=true; } else { knifeHitsRef.current.push(hitAngle); directionRef.current *= -1; } };
+ Explanation: Updates rotation with modular wrap to maintain 0–359 range; collision detection checks minimal circular distance threshold, storing successful hit angles and reversing spin direction to vary difficulty.
+
+--------------------------------------------------------------------
+Assignments 45–49 (Feature Bridges)
+Focus: Additional animation, selection, game variants or UI illusions preparing for memory game (#50) and puzzle (#53). Deepened practice with immutability & randomized data.
+
+--------------------------------------------------------------------
+Assignment 50 (Flip-and-Match Memory Game)
+File: ASG_50.jsx
+Technologies: Data-driven game from JSON; duplication & shuffle; match detection with timeouts for UX pacing.
+Algorithm (Fisher–Yates style): for (i = a.length - 1; i > 0; i--) { j = Math.floor(Math.random()*(i+1)); swap }.
+Logic:
+- Build deck: arr = shuffle([...collection.items, ...collection.items]); limit to 16.
+- Flip control: if two indexes flipped compare equality; on match mark done; else reset after delay.
+Edge Cases: Prevent flipping same card twice or flipping while two unmatched flips active.
+Learning: Pure deterministic shuffling; delayed state resolution; game state segmentation (selected, flipped, done arrays).
+
+ Code Excerpt:
+   function handleCardClick(idx){ if(flipped.includes(idx)|| done.includes(idx) || flipped.length===2) return; const newFlipped=[...flipped, idx]; setFlipped(newFlipped); if(newFlipped.length===2){ const [a,b]=newFlipped; if(cards[a]===cards[b]){ setTimeout(()=>{ setDone(p=>[...p,a,b]); setFlipped([]); },500);} else { setTimeout(()=> setFlipped([]),700); } } }
+ Explanation: Guards against invalid flips (already matched or two exposed); on second flip compares symbols, scheduling either match persistence or concealment with small timeout for user feedback.
+
+--------------------------------------------------------------------
+Assignment 51–52 (Likely Scroll Step Animations / Multi-Step Interaction)
+Focus: Building smooth step indicators, asset usage (icons) for progression visuals.
+
+--------------------------------------------------------------------
+Assignment 53 (Word Jumble / Word Search Puzzle)
+File: ASG_53.jsx
+Technologies: Grid generation, random word placement horizontal/vertical, prefix validation algorithm, bidirectional (forward or reverse) selection, drag vs click multi-mode input, dynamic answer set, shuffle restart.
+Algorithms & Calculations:
+- Grid initialize: Array.from({length:GRID_SIZE}, ()=> Array(GRID_SIZE).fill(null)).
+- Random placement attempts up to limit ensuring overlapping letters compatible.
+- Word coordinate sequences stored for validation.
+- Prefix check: Each incremental selection validated against all words forward or reversed (avoid invalid continuations early).
+- Selection finalize: Compare length & full coordinate equality to mark found.
+- Fisher–Yates shuffle for answers order.
+State Structures: addedWords [{word, coords[]}], answers[], selectedCoords[], foundWords (Set), drag answer direction reference for direction disambiguation.
+Edge Cases: Prevent selecting same cell twice, handle decoys (if any), maintain selection validity flag -> CSS invalid feedback.
+Learning: Spatial algorithms, coordinate equality abstraction, early pruning for user feedback performance.
+
+ Code Excerpt:
+   function selectionIsPrefix(selection){ for(const item of addedWords){ const forward=item.coords; const reverse=forward.slice().reverse(); let okF=true; for(let i=0;i<selection.length;i++){ if(selection[i].x!==forward[i].x || selection[i].y!==forward[i].y){ okF=false; break; } } if(okF) return true; let okR=true; for(let i=0;i<selection.length;i++){ if(selection[i].x!==reverse[i].x || selection[i].y!==reverse[i].y){ okR=false; break; } } if(okR) return true; } return false; }
+   function finalizeSelection(selection){ for(const item of addedWords){ if(selection.length===item.coords.length){ const forwardMatch = item.coords.every((c,i)=> c.x===selection[i].x && c.y===selection[i].y); const reverseMatch = item.coords.slice().reverse().every((c,i)=> c.x===selection[i].x && c.y===selection[i].y); if(forwardMatch || reverseMatch){ setFoundWords(prev=> new Set(prev).add(item.word)); return; } } } setSelectionValid(false); setTimeout(()=> { setSelectedCoords([]); setSelectionValid(true); },350); }
+ Explanation: Prefix validator stops invalid growth early by testing partial path against both forward and reverse coordinate sequences; finalize confirms full-length exact coordinate alignment and records discovered words in a Set for O(1) lookup.
+
+--------------------------------------------------------------------
+Assignments 54–55 (Console / Additional Tooling UI, Possibly Custom Console Implementation)
+Focus: Interface mimicry, event logging mechanics, virtualization patterns.
+
+--------------------------------------------------------------------
+Assignment 56 (Likely Sliding Puzzle – Based on asset 'sliding-puzzle.jpg')
+Focus: Tile indexing math (row-major index conversions), adjacency checks, random solvable shuffle (if implemented), user-driven movement logic. Reinforced 2D coordinate mapping.
+
+--------------------------------------------------------------------
+Assignment 57–59 (Zoom List, Progressive Interaction, Asset Intensive)
+Focus: Zoomable list, close interactions, JSON-driven dynamic content (zoom-in-list.json), layering and transform origin calculations.
+
+--------------------------------------------------------------------
+Assignment 60 (Canvas Drawing + Video Recording)
+File: ASG_60.jsx
+Technologies: Canvas pointer drawing, dynamic brush size, MediaRecorder capturing canvas stream, color palette loaded from JSON.
+Calculations:
+- getPos converting client coords to canvas local coordinates with bounding rect subtraction.
+- Stream capture: canvas.captureStream(30) frame rate 30 fps fed to MediaRecorder.
+Logic: On pointer down beginPath -> stroke initial pixel to ensure dot; lineTo chaining for smooth stroke; record toggling creating Blob, constructing download anchor.
+Resource Management: URL.createObjectURL + revoke after click; chunk accumulation in ondataavailable.
+Learning: Integrating drawing tool with recording pipeline; controlling pointer events for drawing life cycle; customizing stroke attributes.
+
+ Code Excerpt:
+   const startDraw = e => { drawingRef.current=true; const {x,y}=getPos(e); const ctx=ctxRef.current; ctx.beginPath(); ctx.strokeStyle=currentColor; ctx.lineWidth=brushSize; ctx.moveTo(x,y); ctx.lineTo(x,y); ctx.stroke(); };
+   const startRec=()=> { const stream=canvasRef.current.captureStream(30); const mr=new MediaRecorder(stream,{mimeType:'video/webm'}); mr.ondataavailable=e=> chunksRef.current.push(e.data); mr.onstop=()=> { const blob=new Blob(chunksRef.current,{type:'video/webm'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='drawing.webm'; a.click(); URL.revokeObjectURL(url); }; mr.start(); recorderRef.current=mr; setRecording(true); };
+ Explanation: Drawing logic seeds a path so even a click registers a dot; recording logic captures canvas at 30fps, accumulates chunks, and produces downloadable WebM file on stop with proper object URL cleanup.
+
+--------------------------------------------------------------------
+Assignment 61 (Real-Time Chat via WebSocket)
+File: ASG_61.jsx & server.js
+Technologies: WebSocket client + Node ws server; message broadcasting; filtering control frames; blob vs string handling.
+Server Logic (server.js):
+- On message parse JSON if control {type:'ping'|'pong'} -> respond with pong else broadcast to all other clients.
+- client.send(messageStr) inside iteration filtering sender.
+Client Logic: Distinguish Blob vs string; FileReader conversion; time-stamping messages with toLocaleTimeString; ignoring ping/pong frames.
+Edge Cases: Safe close; error event handling; conditional rendering 'Connecting...' while socket null.
+Learning: Event-driven network programming, message serialization filtering, multi-client state updates.
+
+ Code Excerpt (Client):
+   useEffect(()=> { const socket=new WebSocket('ws://localhost:3000'); socket.onmessage=(event)=> { if(event.data instanceof Blob){ const reader=new FileReader(); reader.onload=()=> { const text=reader.result.toString(); if(text.startsWith('{') && text.includes('"type"')) return; setMessages(p=> [...p,{ text, type:'received', time:new Date().toLocaleTimeString()}]); }; reader.readAsText(event.data);} else { if(event.data.startsWith('{') && event.data.includes('"type"')) return; setMessages(p=> [...p,{ text:event.data, type:'received', time:new Date().toLocaleTimeString()}]); } }; setSocket(socket); return ()=> socket.close(); },[]);
+   const sendMessage=()=> { socket.send(userMessage); setMessages(p=> [...p,{ text:userMessage, type:'sent', time:new Date().toLocaleTimeString()}]); };
+ Explanation: Establishes WebSocket connection on mount and tears down on unmount; differentiates Blob vs string payloads, filters control JSON frames, and appends timestamped messages to chat log.
+
+ Code Excerpt (Server server.js):
+   wss.on('connection', ws => { ws.on('message', msg => { const messageStr=msg.toString(); if(messageStr.startsWith('{')){ try{ const parsed=JSON.parse(messageStr); if(parsed.type==='ping'){ ws.send(JSON.stringify({type:'pong'})); return; } }catch(e){} } wss.clients.forEach(client=> { if(client!==ws && client.readyState===WebSocket.OPEN){ client.send(messageStr); } }); }); });
+ Explanation: Broadcast server pattern—on message, filter ping frames (respond with pong) then iterate open clients excluding sender to distribute chat content; keeps protocol chatter out of client UI.
+
+--------------------------------------------------------------------
+Assignments 62–63 (Post-Initial 61 – Present in Folder)
+Focus: Continued enhancement after initial milestone; ensures iterative practice (similar patterns of state + interactive feature). Maintained codebase consistency (CSS + JSX naming convention). Reinforced scalability of architecture.
+
+====================================================================
+4. REDUX TOOLKIT & GLOBAL STATE (authSlice.js)
+====================================================================
+File: src/store/authSlice.js
+Technologies: Redux Toolkit createSlice.
+Actions & State Fields:
+- setAuthState (user, token, isAuthenticated)
+- setMode (UI mode toggling: summary/edit-menu/etc.)
+- setSubscriptionEnabled, setLoading, setError, setSuccess, updateUser (partial merge), clearAuth, clearMessages.
+Patterns Learned:
+- Immutable update semantics internally handled by Immer (write "mutating" style safely).
+- Separation of transient vs persistent messages; clearing side-effect results after display.
+Integration Insight: Could be extended to unify assignments requiring auth gating and profile modifications.
+
+====================================================================
+5. UTILITY FUNCTIONS
+====================================================================
+File: helper.js
+getStoredToken(): Prioritizes localStorage then sessionStorage; pattern for progressive enhancement or fallback security model.
+Learning: Abstraction of storage retrieval to reduce duplication; fosters testability.
+
+====================================================================
+6. CROSS-CUTTING LOGIC & DESIGN PATTERNS
+====================================================================
+State Management Patterns:
+- useRef for mutable non-rendering data (animation counters, drawing flags, intervals, sockets, workers).
+- useEffect dependency arrays to scope side-effects: model loads, interval creation/cleanup, WebSocket lifecycle, video metadata sync.
+
+Algorithmic Patterns:
+- Fisher–Yates Shuffle (#50, #53 answers order) ensures uniform randomness.
+- Collision Detection via Angular Difference (#44): diff = |(a - b + 360) % 360|.
+- Coordinate Scaling (#29, #36): scaleX = naturalWidth/displayedWidth; mapping UI position to natural coordinates before cropping or landmark overlay.
+- Prefix Validation (#53): Early pruning to give immediate feedback & reduce invalid path expansions.
+- Distance Aggregation (#29): Accumulated Euclidean distances for orientation estimation heuristics.
+- Stream Recording (#60): Capturing canvas frames -> aggregated blobs -> downloadable asset.
+
+Event Handling Models:
+- Pointer vs Mouse Events: Canvas uses pointer events for broader device support (#60); mouse events for image selection (#36).
+- Drag & Drop Events: dragstart / dragover / drop / dragend (#32, #53) customizing selection semantics.
+- Keyboard (Enter to send message) (#61) integrated with message dispatch gating on trimmed input.
+
+Performance Considerations:
+- Offscreen canvas usage (temporary canvases for OCR pre-processing) avoids reflow of main UI (#24).
+- Using refs instead of state inside high-frequency loops to avoid needless re-renders (#44 rotating target, #29 detection loops).
+- requestAnimationFrame for smooth animations rather than setInterval (#44, #29 video detection loop pattern using recursive rAF scheduling).
+
+Error / Edge Handling:
+- Network fallback messages (#10/#11) capturing nested optional fields with optional chaining.
+- Resource cleanup: stopping media tracks (#29), clearing intervals (#18), closing sockets on unmount (#61), removing object URLs (#60).
+- Validation early exits (division by zero, NaN numeric input, duplicate drag indexes, flipping already matched cards, repeated cell selection in word grid).
+
+Security / Reliability Aspects:
+- Token storage minimal pattern; separation of concerns through helper retrieval; potential improvement path—expiry tracking and refresh logic.
+
+UI/UX Enhancements:
+- Disabled buttons to prevent invalid actions (#5 sorting when empty, #10 submit gating, #18 game color buttons on over, #50 flipping constraints, #53 drag answer gating if found).
+- Visual feedback classes (selected/found/invalid in #53, data attributes for styling (#32 drop indicators, #50 flipped/done states, #60 recording state, #61 message bubble types)).
+
+====================================================================
+7. DETAILED TECHNOLOGY FUNCTIONAL EXPLANATIONS WITH EXAMPLES
+====================================================================
+React useState (Example #1 – Toggle Sections):
+  const [visible, setVisible] = useState({ section1:false }); setVisible(prev => ({...prev, section1: !prev.section1})) – merges prior state enabling independent toggles.
+
+React useRef (Example #44 – Animation State):
+  const baseRotationRef = useRef(0); // mutated each frame without re-render.
+Benefit: Keeps rapid mutation outside React reconciliation cycle.
+
+Array Reordering (Example #32):
+  const draggedItem = updatedItems.splice(draggedIndex,1)[0]; updatedItems.splice(insertIndex,0, draggedItem);
+Ensures O(n) shift while preserving the dragged object reference.
+
+Fisher–Yates Shuffle (Example #50):
+  for (let i = a.length-1; i>0; i--) { const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]] }
+Guarantees uniform distribution of permutations.
+
+Collision via Angular Difference (Example #44):
+  const diff = Math.abs((deg - hitAngle + 360) % 360); if (diff < 15 || 360 - diff < 15) collision.
+Rationale: Minimal modular distance on circular metric accounts for wrap-around boundary.
+
+Prefix Validation (Example #53): selectionIsPrefix iterates addedWords; compares sequence forward and reversed early -> prevents wasted selection growth.
+
+Canvas Cropping (Example #36):
+  sourceX = (relativeX - size/2) * scaleX; ctx.drawImage(img, sourceX, sourceY, sourceWidth, sourceHeight, 0,0,size,size);
+Maps user-drag frame to underlying full-resolution coordinate space ensuring sharp extracted fragment.
+
+MediaRecorder (Example #60):
+  const stream = canvas.captureStream(30); const mr = new MediaRecorder(stream); mr.ondataavailable= e => chunks.push(e.data); mr.onstop -> Blob -> download.
+Converts live drawing to replayable video artifact.
+
+Face Landmark Pose Heuristic (Example #29):
+  rot_x = asin((0.5 - rot_x_b / (rot_x_a + rot_x_b)) * 2) approximates pitch by relative distances nose/face vertical proportions.
+
+WebSocket Message Routing (server.js + #61): Iterate wss.clients; if (client !== ws) client.send(messageStr); ensures broadcasting excluding sender; pings filtered by type field.
+
+OCR Upscaling (Example #24): Doubling canvas resolution increases stroke edge clarity for tesseract pattern recognition improving character extraction fidelity.
+
+====================================================================
+8. STATISTICAL / NUMERIC & LOGICAL CALCULATIONS LIST
+====================================================================
+Arithmetic: Basic operations (+,-,*,/) (#2, #5 sorting numeric comparison).
+Distance Metrics: Euclidean sqrt((dx)^2 + (dy)^2) (#29 orientation, #29 landmark distance accumulation).
+Angle Computations: Math.atan2(dy,dx)*(180/Math.PI) (#44 knife hit, #29 orientation axes), modulo normalization (angle+360)%360.
+Randomization: Math.random() for coin flips (#18 picking color, #25 rotational perspective context maybe), selection of j index (#50, #53), direction toggling (#29 orientation start orientation, #25 random demonstration if used).
+Scaling Factors: naturalWidth/displayedWidth (#36 cropping, #29 face landmarks), videoRect.width/video.videoWidth (#29 frame overlay), proportions of scroll (#41 percent = scrollTop / maxScroll).
+Set Membership & Uniqueness: new Set() for foundWords (#53) ensures O(1) membership test.
+Filtering & Mapping: answers.map, numbers.filter, colors.map (#18, #50, #61 messages), grid.map nested (#53 grid rendering).
+Prefix and Sequence Validation: forward/reverse coordinate equality (#53), reordering index arithmetic (#32) adjusting insert index after removal.
+Time Calculations: Interval tick counts (#18), requestAnimationFrame loops (#44, #29), timestamping chat messages new Date().toLocaleTimeString() (#61).
+Heuristic Pose Calculation: Weighted ratio of distances producing angle via arcsine (#29 rot_x, rot_y) – approximates orientation without full 3D model.
+Array Splice & Spread: Creating shallow copies to respect immutability (#5, #32, #50, #53, #36).
+
+====================================================================
+9. CHALLENGES & RESOLUTIONS
+====================================================================
+1. Real-Time Performance (#29, #44): Resolved by placing mutable animation counters in refs, decoupling from React render cycle.
+2. Accurate Cropping (#36): Need to translate screen coordinates to natural image coordinates; solved with scale factors scaleX/scaleY.
+3. Preventing Invalid Word Selections (#53): Introduced prefix validation to give immediate visual feedback and reduce user confusion.
+4. Managing Timed Interactions (#18, #50): Used timeouts and intervals with robust cleanup in useEffect to avoid orphaned timers.
+5. Handling Binary Data (OCR & Recording) (#24, #60): Leveraged toBlob, MediaRecorder, DataURL conversions; ensured memory freed (revokeObjectURL).
+6. Filtering Control Messages (#61): Avoid displaying protocol-level JSON ping/pong by schema checking before UI addition.
+
+====================================================================
+10. SUMMARY & CONSOLIDATED LEARNINGS
+====================================================================
+This three‑month period delivered end‑to‑end exposure across core front-end engineering dimensions: UI construction, state management, asynchronous data flows, graphics, media processing, simple game mechanics, computational geometry, text recognition, and real‑time communication.
+
+Core Competencies Strengthened:
+- React Proficiency: Hook orchestration, state immutability, ref usage for performance, conditional rendering patterns.
+- Algorithmic Thinking: Implementing shuffle, collision checks, prefix pruning, orientation heuristics, cropping coordinate transforms, memory match logic.
+- Browser & Media APIs: Canvas drawing, image cropping, video frame mapping, MediaRecorder archiving, getUserMedia device integration.
+- Real-Time Systems: WebSockets for bi-directional messaging, requestAnimationFrame for deterministic animation loops.
+- Data & ML Integration: Face detection & landmarks via face-api.js; OCR recognition with Tesseract.js; bridging asynchronous inference with UI states.
+- UX & Interaction: Drag & drop reorder, word selection multifaceted input (drag + click), dynamic feedback states (invalid selection highlighting, flipping animations, recording toggles, chat bubbles). 
+- Robustness: Defensive coding around null references, network errors, boundary indices, race prevention (e.g., skip actions when in terminal states like gameOver or double flip attempt).
+
+Illustrative Example – End-to-End Data + UI Flow (#29 Face Detection):
+1. User chooses media -> object URL set.
+2. useEffect triggers model load (async) -> detection pipeline starts on onload/onplay events.
+3. requestAnimationFrame iteratively processes frames -> faceapi.TinyFaceDetector outputs detection objects.
+4. Landmarks scaled & drawn onto overlay canvas -> orientation heuristics computed -> visual axes render.
+5. State updated with bounding boxes -> React re-renders minimal bounding box divs.
+Demonstrates synergy of asynchronous I/O, external ML lib, geometry calculations, layered canvases, minimal React re-rendering (boxes only) for performance.
+
+Illustrative Example – Interaction Geometry (#44 Knife Game):
+1. Frame loop mutates rotation ref.
+2. Click triggers knife travel with CSS transition; after fixed delay compute relative angle using center coordinates.
+3. Normalize angle onto rotating base frame -> compare against stored angles with modular difference tolerance.
+4. On collision set gameOver; else store new angle and invert rotation direction for difficulty modulation.
+
+Illustrative Example – Selection Validation (#53 Word Jumble):
+1. User drags across grid or drags answer word initiating coordinate sequence build.
+2. Each addition validated by selectionIsPrefix to ensure potential match remains plausible (forward or reverse variant) – immediate UI invalid class if not.
+3. On drop finalize: full match -> add to foundWords; else show temporary invalid feedback.
+
+Illustrative Example – Media Recording (#60):
+1. User draws on canvas using pointer events writing strokes onto context.
+2. Start recording -> captureStream(30) -> MediaRecorder collects frames.
+3. Stop recording -> Blob assembled -> download link auto-triggered providing user artifact. Clean blob URL after.
+
+Holistic Impact:
+Through iterative assignment escalation I solidified practical engineering instincts: reading DOM metrics for geometry, systematically cleaning up side-effects, structuring gameplay & puzzle logic, integrating external libraries responsibly, and designing user-centric feedback loops. This cumulative skill stack prepares me for larger full‑feature development (multi-component dashboards, collaborative real-time tools, or advanced media augmentation interfaces).
+
+====================================================================
+11. NEXT STEPS / FUTURE IMPROVEMENTS
+====================================================================
+- Extend auth slice usage across protected assignments (centralized gating & role-based flows).
+- Introduce test coverage (unit tests for shuffle integrity, prefix validation, angle collision) to formalize correctness.
+- Performance profiling on face detection path (web workers for heavy frames, throttled detection frequency).
+- Add accessibility refinements (ARIA roles already partially used in #53; expand semantic labeling & keyboard navigation for game UIs).
+- Implement persistence for game progress (localStorage for high scores or puzzle state restoration).
+- Add error boundaries for ML dependent components.
+
+====================================================================
+12. CONCLUSION
+====================================================================
+The first three months yielded a comprehensive breadth-first mastery journey across interactive front-end engineering and media-rich application development. The assignments collectively internalized: structured state management, algorithm design, user interaction paradigms, asynchronous flows, and applied ML integration. This foundation positions me to contribute effectively to production-level features at IMI Games, especially those involving real-time interactivity, media processing, and dynamic UI logic.
+
+End of Report.

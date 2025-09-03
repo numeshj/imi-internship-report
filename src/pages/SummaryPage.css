@@ -1,0 +1,19 @@
+/* Summary Page Styles */
+.summary-page { padding: 120px clamp(26px,3.6vw,42px); }
+.summary-page h2 { margin-top:0; font-size: clamp(2rem,3.3vw,2.8rem); }
+.summary-intro { font-size:1.05rem; line-height:1.65; max-width:900px; }
+.summary-stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:26px; margin-top:42px; }
+.summary-stats-grid ul { padding-left:18px; margin:0; font-size:0.88rem; line-height:1.5; }
+.summary-card-small ul { font-size:0.8rem; }
+.summary-competencies { display:flex; flex-wrap:wrap; gap:8px; }
+.summary-competencies .badge { font-size:0.65rem; }
+.summary-section-title { margin-top:60px; }
+.summary-challenges-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(330px,1fr)); gap:22px; margin-top:18px; }
+.summary-challenge h4 { margin:0 0 6px; font-size:0.95rem; }
+.summary-challenge p { margin:0; font-size:0.78rem; line-height:1.5; }
+.summary-next { display:flex; flex-wrap:wrap; gap:10px; margin-top:20px; }
+.summary-next .tag { font-size:0.65rem; }
+@media (max-width:780px){
+  .summary-page { padding:110px 24px; }
+  .summary-intro { font-size:0.98rem; }
+}

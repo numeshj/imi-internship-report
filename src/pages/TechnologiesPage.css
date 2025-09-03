@@ -1,0 +1,11 @@
+/* Technologies Page Styles */
+.tech-page { padding:120px clamp(26px,3.6vw,42px); }
+.tech-page h2 { margin-top:0; font-size:clamp(1.9rem,3.1vw,2.5rem); }
+.tech-filters { display:flex; flex-wrap:wrap; gap:10px; margin-top:16px; }
+.tech-filters input, .tech-filters select, .tech-filters button { font-size:0.95rem; padding:14px 18px; border-radius:14px; background:var(--card-bg); border:1px solid var(--border-color); color:var(--text-color); }
+.tech-filters button { font-size:0.85rem; cursor:pointer; }
+.tech-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:20px; margin-top:34px; }
+.tech-card { padding:18px 20px; display:flex; flex-direction:column; gap:10px; }
+.tech-card .badge { font-size:0.65rem; align-self:flex-start; }
+.tech-card h3 { margin:0; font-size:1rem; }
+@media (max-width:700px){ .tech-filters input, .tech-filters select { flex:1 1 100%; } }

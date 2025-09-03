@@ -1,0 +1,14 @@
+/* Assignment Detail Page Styles */
+.assignment-detail-page { padding:120px clamp(26px,3.6vw,42px); }
+.assignment-detail-page h2 { margin-top:0; font-size:clamp(2rem,3.2vw,2.7rem); }
+.assignment-tags { display:flex; flex-wrap:wrap; gap:8px; margin:14px 0; }
+.assignment-tags .tag { font-size:0.6rem; }
+.assignment-detail-card { padding:28px 30px; }
+.assignment-detail-card h3 { margin-top:0; font-size:1.15rem; }
+.assignment-detail-card p { font-size:0.95rem; line-height:1.6; }
+.assignment-detail-card .learning { font-size:0.85rem; opacity:0.8; }
+.assignment-code { margin-top:18px; background:var(--code-bg,rgba(255,255,255,0.05)); padding:18px 20px; border-radius:14px; overflow-x:auto; font-size:0.75rem; line-height:1.5; }
+.assignment-file { margin-top:22px; font-size:0.75rem; opacity:0.6; }
+.assignment-nav { display:flex; justify-content:space-between; margin-top:34px; }
+.assignment-nav .badge { background:var(--card-bg); cursor:pointer; }
+@media (max-width:780px){ .assignment-detail-page { padding:110px 24px; } }
