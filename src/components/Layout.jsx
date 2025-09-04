@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import './Dashboard.css';
+import ChatBot from '../chat/ChatBot';
 
 // Persistent layout hosting the global navigation + theme toggle
 const Layout = () => {
@@ -46,6 +47,7 @@ const Layout = () => {
       <main style={{minHeight:'100vh'}}>
         <Outlet />
       </main>
+      <ChatBot />
     </div>
   );
 };
