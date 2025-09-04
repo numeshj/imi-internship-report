@@ -58,10 +58,94 @@ if REPORT_JS.exists():
             q = f"assignment {_id} {base_title} logic"
         a = logic
         RAW_PAIRS.append((q, a))
+        # Additional question variants for assignments
+        if logic and logic != '' and logic.lower() != 'inferred':
+            RAW_PAIRS.append((f"what is assignment {_id}", logic))
+            RAW_PAIRS.append((f"explain assignment {_id}", logic))
+            RAW_PAIRS.append((f"what does assignment {_id} do", logic))
+        # learning capture
+        learn_match = re.search(rf"id:\s*{_id}.*?learning: '([^']*)'", text, re.DOTALL)
+        if learn_match:
+            learn_val = learn_match.group(1).strip()
+            if learn_val and learn_val.lower() != 'inferred':
+                RAW_PAIRS.append((f"learning from assignment {_id}", learn_val))
+                RAW_PAIRS.append((f"what did you learn in assignment {_id}", learn_val))
+        # concepts list
+        concepts_match = re.search(rf"id:\s*{_id}.*?concepts: \[([^\]]*)\]", text, re.DOTALL)
+        if concepts_match:
+            concept_items = [c.strip().strip("'\"") for c in concepts_match.group(1).split(',') if c.strip()]
+            if concept_items:
+                concepts_answer = ", ".join(concept_items)
+                RAW_PAIRS.append((f"concepts in assignment {_id}", concepts_answer))
+                RAW_PAIRS.append((f"which concepts does assignment {_id} cover", concepts_answer))
     # Patterns
     pattern_matches = re.findall(r"name: '([^']+)'[\s\S]*?description: '([^']+)'", text)
     for name, desc in pattern_matches:
         RAW_PAIRS.append((f"pattern {name.lower()}", desc))
+        RAW_PAIRS.append((f"what is the {name.lower()} pattern", desc))
+        RAW_PAIRS.append((f"explain {name.lower()} pattern", desc))
+
+    # Summary fields (period, company, role, total assignments)
+    period_match = re.search(r"period: '([^']+)'", text)
+    if period_match:
+        period_val = period_match.group(1)
+        RAW_PAIRS.append(("what is the internship period length", period_val))
+        RAW_PAIRS.append(("internship period", period_val))
+    company_match = re.search(r"company: '([^']+)'", text)
+    if company_match:
+        company_val = company_match.group(1)
+        RAW_PAIRS.append(("which company", f"The internship was completed at {company_val}."))
+        RAW_PAIRS.append(("company of internship", company_val))
+    role_match = re.search(r"role: '([^']+)'", text)
+    if role_match:
+        role_val = role_match.group(1)
+        RAW_PAIRS.append(("internship role", role_val))
+        RAW_PAIRS.append(("what was your internship role", role_val))
+    total_match = re.search(r"totalAssignments: (\d+)", text)
+    if total_match:
+        total_val = total_match.group(1)
+        RAW_PAIRS.append(("how many assignments completed", total_val))
+        RAW_PAIRS.append(("total assignments", total_val))
+
+    # Core competencies (list)
+    comp_block = re.search(r"coreCompetencies: \[(.*?)\]", text, re.DOTALL)
+    if comp_block:
+        comps = [c.strip().strip("'\"") for c in comp_block.group(1).split(',') if c.strip()]
+        if comps:
+            comps_ans = ", ".join(comps)
+            RAW_PAIRS.append(("list core competencies", comps_ans))
+            RAW_PAIRS.append(("what are the core competencies", comps_ans))
+
+    # Challenges and resolutions
+    challenges = re.findall(r"challenge: '([^']+)'\s*,\s*resolution: '([^']+)'", text)
+    for ch, res in challenges:
+        RAW_PAIRS.append((f"challenge: {ch.lower()}", res))
+        RAW_PAIRS.append((f"how was {ch.lower()} solved", res))
+        RAW_PAIRS.append((f"solution to {ch.lower()}", res))
+
+    # Next steps / roadmap
+    next_steps_block = re.search(r"nextSteps: \[(.*?)\]", text, re.DOTALL)
+    if next_steps_block:
+        steps = [s.strip().strip("'\"") for s in next_steps_block.group(1).split(',') if s.strip()]
+        if steps:
+            steps_ans = "; ".join(steps)
+            RAW_PAIRS.append(("next steps after internship phase", steps_ans))
+            RAW_PAIRS.append(("future improvements planned", steps_ans))
+
+    # Technologies categories
+    tech_section = re.search(r"export const technologies = {(.*?)};", text, re.DOTALL)
+    if tech_section:
+        categories = re.findall(r"(\w+): \[([^\]]*)\]", tech_section.group(1))
+        for cat, items_str in categories:
+            items = [i.strip().strip("'\"") for i in items_str.split(',') if i.strip()]
+            if not items:
+                continue
+            cat_ans = ", ".join(items)
+            RAW_PAIRS.append((f"technologies in category {cat.lower()}", cat_ans))
+            RAW_PAIRS.append((f"list {cat.lower()} technologies", cat_ans))
+            for itm in items:
+                RAW_PAIRS.append((f"what is {itm.lower()}", f"Technology / tool: {itm}"))
+                RAW_PAIRS.append((f"explain {itm.lower()}", f"Technology / tool: {itm}"))
 
 # Deduplicate
 seen = set()
