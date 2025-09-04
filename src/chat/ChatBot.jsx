@@ -41,7 +41,16 @@ const ChatBot = () => {
     const handleStart = () => { startStreamingAssistant(); };
     const handleMeta = (e) => { const d = e.detail; setSources(d.sources||[]); setConfidence(d.confidence||null); };
     const handleToken = (e) => { updateLastAssistant(e.detail.text, { append:false }); };
-    const handleDone = () => { finalizeStreamingAssistant(); };
+    const handleDone = (e) => {
+      const d = (e && e.detail) || {};
+      // If nothing was streamed (no tokens) use message or fallback
+      const lastAssistant = [...messages].reverse().find(m=>m.role==='assistant');
+      if(lastAssistant && (!lastAssistant.content || lastAssistant.content.trim()==='')){
+        const fallback = d.message || 'No confident match. Try rephrasing, e.g. be more specific or ask about an assignment (/asg 10).';
+        updateLastAssistant(fallback, { append:false });
+      }
+      finalizeStreamingAssistant();
+    };
     window.addEventListener('chat-stream-start', handleStart);
     window.addEventListener('chat-stream-meta', handleMeta);
     window.addEventListener('chat-stream-token', handleToken);
@@ -52,7 +61,7 @@ const ChatBot = () => {
       window.removeEventListener('chat-stream-token', handleToken);
       window.removeEventListener('chat-stream-done', handleDone);
     };
-  }, [startStreamingAssistant, updateLastAssistant, finalizeStreamingAssistant]);
+  }, [startStreamingAssistant, updateLastAssistant, finalizeStreamingAssistant, messages]);
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
   const [editing, setEditing] = useState(false);
@@ -259,7 +268,7 @@ function startStream(question){
                 assistantBuffer += data.text;
                 window.dispatchEvent(new CustomEvent('chat-stream-token', { detail:{ text:assistantBuffer } }));
               } else if(data.event === 'done') {
-                window.dispatchEvent(new CustomEvent('chat-stream-done'));
+                window.dispatchEvent(new CustomEvent('chat-stream-done', { detail:data }));
               }
             } catch(e){ /* ignore parse */ }
         }
