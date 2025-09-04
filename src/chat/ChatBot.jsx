@@ -8,6 +8,7 @@ const ChatBot = () => {
   const [checking, setChecking] = useState(false);
   const [useStream, setUseStream] = useState(true);
   const [apiBase, setApiBase] = useState('http://localhost:8001');
+  const hadTokensRef = useRef(false); // track if any token arrived for current stream
   const panelRef = useRef(null);
   const dragState = useRef(null);
   const resizeState = useRef(null);
@@ -38,16 +39,20 @@ const ChatBot = () => {
 
   // SSE UI updates
   useEffect(()=>{
-    const handleStart = () => { startStreamingAssistant(); };
+  const handleStart = () => { hadTokensRef.current = false; startStreamingAssistant(); };
     const handleMeta = (e) => { const d = e.detail; setSources(d.sources||[]); setConfidence(d.confidence||null); };
-    const handleToken = (e) => { updateLastAssistant(e.detail.text, { append:false }); };
+  const handleToken = (e) => { hadTokensRef.current = true; updateLastAssistant(e.detail.text, { append:false }); };
     const handleDone = (e) => {
       const d = (e && e.detail) || {};
-      // If nothing was streamed (no tokens) use message or fallback
       const lastAssistant = [...messages].reverse().find(m=>m.role==='assistant');
-      if(lastAssistant && (!lastAssistant.content || lastAssistant.content.trim()==='')){
-        const fallback = d.message || 'No confident match. Try rephrasing, e.g. be more specific or ask about an assignment (/asg 10).';
-        updateLastAssistant(fallback, { append:false });
+      if(!hadTokensRef.current){
+        const fallback = d.message || 'No confident match. Try rephrasing or narrow the topic (e.g. ask: "assignment 12 logic" or /help).';
+        if(lastAssistant){
+          updateLastAssistant(fallback, { append:false });
+        } else {
+          startStreamingAssistant();
+          updateLastAssistant(fallback, { append:false });
+        }
       }
       finalizeStreamingAssistant();
     };
