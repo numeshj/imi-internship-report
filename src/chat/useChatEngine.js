@@ -61,7 +61,8 @@ function formatAssignment(term){
 export function useChatEngine(){
   const [messages, setMessages] = useState(()=> {
     try {
-      const raw = localStorage.getItem('imi-chat-history');
+      const uid = localStorage.getItem('imi-user-id') || 'default';
+      const raw = localStorage.getItem('imi-chat-history-' + uid);
       if(raw){
         const parsed = JSON.parse(raw);
         if(Array.isArray(parsed)) return parsed.slice(-200); // cap
@@ -189,7 +190,10 @@ export function useChatEngine(){
 
   // Persist
   useEffect(()=>{
-    try { localStorage.setItem('imi-chat-history', JSON.stringify(messages)); } catch(e){ /* ignore */ }
+    try {
+      const uid = localStorage.getItem('imi-user-id') || 'default';
+      localStorage.setItem('imi-chat-history-' + uid, JSON.stringify(messages));
+    } catch(e){ /* ignore */ }
   }, [messages]);
 
   return { messages, send, retryLast, editLastUser, clear, streaming, abort, addAssistant, appendUser, startStreamingAssistant, updateLastAssistant, finalizeStreamingAssistant };

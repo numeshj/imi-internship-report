@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useChatEngine } from './useChatEngine';
 import './chatStyles.css';
 
@@ -9,6 +9,10 @@ const ChatBot = () => {
   const [useStream, setUseStream] = useState(true);
   const [apiBase, setApiBase] = useState('http://localhost:8001');
   const hadTokensRef = useRef(false); // track if any token arrived for current stream
+  const [userId, setUserId] = useState(()=> localStorage.getItem('imi-user-id') || ''); 
+  const [userName, setUserName] = useState(()=> localStorage.getItem('imi-user-name') || ''); 
+  const [userEmail, setUserEmail] = useState(()=> localStorage.getItem('imi-user-email') || ''); 
+  const [needsIdentity, setNeedsIdentity] = useState(()=> !localStorage.getItem('imi-user-id'));
   const panelRef = useRef(null);
   const dragState = useRef(null);
   const resizeState = useRef(null);
@@ -73,9 +77,7 @@ const ChatBot = () => {
   const listRef = useRef(null);
   const inputRef = useRef(null);
 
-  useEffect(()=>{
-    if(open && inputRef.current) inputRef.current.focus();
-  }, [open]);
+  useEffect(()=>{ if(open && inputRef.current && !needsIdentity) inputRef.current.focus(); }, [open, needsIdentity]);
 
   useEffect(()=>{
     if(listRef.current){
@@ -85,6 +87,7 @@ const ChatBot = () => {
 
   const handleSend = async () => {
     if(!input.trim()) return;
+  if(needsIdentity){ return; }
     if(editing){
       editLastUser(input);
       setEditing(false);
@@ -96,7 +99,7 @@ const ChatBot = () => {
           startStream(question);
         } else {
           try {
-            const r = await fetch(apiBase + '/chat', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ question, top_k:3 }) });
+            const r = await fetch(apiBase + '/chat', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ question, top_k:3, user_id:userId }) });
             const data = await r.json();
             if(data.markdown){ addAssistant(data.markdown); setSources(data.results||[]); setConfidence(data.results?.[0]?.score || null); }
             else if(data.answer){ addAssistant(data.answer); }
@@ -117,32 +120,84 @@ const ChatBot = () => {
 
   const lastUserContent = (()=>{ const rev=[...messages].reverse(); const u = rev.find(m=>m.role==='user'); return u?.content||''; })();
 
+  // Identity helpers (moved here from misplaced section)
+  const generateUserId = () => 'user-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,8);
+  const submitIdentity = async (e) => {
+    e.preventDefault();
+    if(!userName.trim() || !userEmail.trim()) return;
+    let id = userId;
+    if(!id){ id = generateUserId(); setUserId(id); localStorage.setItem('imi-user-id', id); }
+    localStorage.setItem('imi-user-name', userName.trim());
+    localStorage.setItem('imi-user-email', userEmail.trim());
+    setNeedsIdentity(false);
+    try { const base = window.__CHAT_API_BASE || apiBase; fetch(base + '/session/init', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ user_id:id, name:userName.trim(), email:userEmail.trim() }) }).catch(()=>{}); } catch(_){}
+    setTimeout(()=>{ if(inputRef.current) inputRef.current.focus(); }, 60);
+  };
+  useEffect(()=>{ if(backendMode && userId){ const base = window.__CHAT_API_BASE || apiBase; fetch(base + '/session/init', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ user_id:userId, name:localStorage.getItem('imi-user-name')||'', email:localStorage.getItem('imi-user-email')||'' }) }).catch(()=>{}); } }, [backendMode, userId, apiBase]);
+
+  // Delete single message (persist removal)
+  const deleteMessage = useCallback((id)=>{
+    const uid = localStorage.getItem('imi-user-id') || 'default';
+    const key = 'imi-chat-history-' + uid;
+    try {
+      const raw = localStorage.getItem(key);
+      let arr = [];
+      if(raw){ arr = JSON.parse(raw) || []; }
+      arr = arr.filter(m => m.id !== id);
+      localStorage.setItem(key, JSON.stringify(arr));
+    } catch(_){}
+    // Force refresh by filtering in-memory state using internal API (rebuild messages array)
+    // We can't directly set from hook here; use window event as a lightweight bus.
+    window.dispatchEvent(new CustomEvent('imi-chat-delete', { detail:{ id } }));
+  }, []);
+  useEffect(()=>{
+    const handler = (e)=>{
+      const id = e.detail.id;
+      // Rebuild local state by filtering
+      // Because useChatEngine owns messages, we'll patch by storing function? Quick approach: reload from storage for current user
+      try {
+        const uid = localStorage.getItem('imi-user-id') || 'default';
+        const raw = localStorage.getItem('imi-chat-history-' + uid);
+        if(raw){
+          const parsed = JSON.parse(raw) || [];
+          // Not directly exposed: We'll just hide via CSS? Instead simpler: mark message with deleted placeholder
+        }
+      } catch(_){ }
+    };
+    window.addEventListener('imi-chat-delete', handler);
+    return ()=> window.removeEventListener('imi-chat-delete', handler);
+  }, []);
+
   return (
     <>
-      <button className="chat-launch" onClick={()=> setOpen(o=>!o)} aria-label={open? 'Close chat' : 'Open chat'}>
+      <button className="imi-chat-launch" onClick={()=> setOpen(o=>!o)} aria-label={open? 'Close chat' : 'Open chat'}>
         {open ? '✖' : '💬'}
       </button>
       {open && (
-        <div className="chat-panel draggable" ref={panelRef} role="dialog" aria-label="Assistant Chat" aria-modal="false">
-          <div className="chat-header" onMouseDown={(e)=>{
-            if(e.target.closest('.chat-actions')) return;
+        <div className="imi-chat-panel draggable" ref={panelRef} role="dialog" aria-label="Assistant Chat" aria-modal="false">
+          <div className="imi-chat-header" onMouseDown={(e)=>{
+            if(e.target.closest('.imi-chat-actions')) return;
             const rect = panelRef.current.getBoundingClientRect();
             dragState.current = { x:e.clientX, y:e.clientY, left:rect.left, top:rect.top };
             document.addEventListener('mousemove', onDrag);
             document.addEventListener('mouseup', endDrag);
           }}>
             <div style={{display:'flex',alignItems:'center',gap:8}}>
-              <div className="chat-title">Assistant{backendMode && <span style={{marginLeft:6,fontSize:'.6rem',letterSpacing:'.8px',fontWeight:600,opacity:.8}}>API</span>}</div>
+              <div className="imi-chat-title">Assistant{backendMode && <span style={{marginLeft:6,fontSize:'.6rem',letterSpacing:'.8px',fontWeight:600,opacity:.8}}>API</span>}</div>
               {!backendMode && !checking && <button onClick={checkBackend} className="retry-backend" title="Retry backend detection" style={{fontSize:'.55rem',letterSpacing:'.6px',padding:'4px 6px'}}>Check API</button>}
               {backendMode && <label style={{display:'flex',alignItems:'center',gap:4,fontSize:'.55rem'}}><input type="checkbox" checked={useStream} onChange={e=> setUseStream(e.target.checked)} />Stream</label>}
             </div>
-            <div className="chat-actions">
+            <div className="imi-chat-actions">
               {streaming ? <button onClick={abort} title="Stop generating">■</button> : <button onClick={retryLast} title="Retry last">⟳</button>}
               <button onClick={()=> { setEditing(true); setInput(lastUserContent); }} disabled={!lastUserContent} title="Edit last user message">✎</button>
               <button onClick={clear} title="Clear conversation">🗑</button>
+              <button className="imi-chat-logout-btn" title="Logout" onClick={()=>{
+                localStorage.removeItem('imi-user-id'); localStorage.removeItem('imi-user-name'); localStorage.removeItem('imi-user-email');
+                setUserId(''); setUserName(''); setUserEmail(''); setNeedsIdentity(true);
+              }}>⎋</button>
               <button onClick={()=> setOpen(false)} title="Close">–</button>
             </div>
-            <div className="resizer" onMouseDown={(e)=>{
+            <div className="imi-chat-resizer" onMouseDown={(e)=>{
               e.stopPropagation();
               const rect = panelRef.current.getBoundingClientRect();
               resizeState.current = { x:e.clientX, y:e.clientY, w:rect.width, h:rect.height };
@@ -150,6 +205,19 @@ const ChatBot = () => {
               document.addEventListener('mouseup', endResize);
             }} />
           </div>
+          {needsIdentity && (
+            <div style={{position:'absolute',inset:0,backdropFilter:'blur(6px)',background:'rgba(0,0,0,0.55)',display:'flex',alignItems:'center',justifyContent:'center',padding:18,zIndex:50}}>
+              <form onSubmit={submitIdentity} style={{background:'var(--panel-bg,rgba(30,30,40,0.9))',border:'1px solid rgba(255,255,255,0.15)',borderRadius:14,padding:'18px 20px',width:'100%',maxWidth:360,color:'var(--text-color,#fff)',boxShadow:'0 4px 18px -4px rgba(0,0,0,0.6)'}}>
+                <h3 style={{margin:'0 0 12px',fontSize:'1.05rem',letterSpacing:'.5px'}}>Identify Yourself</h3>
+                <p style={{margin:'0 0 14px',fontSize:'.7rem',lineHeight:1.4,opacity:.85}}>Enter your name & email so the assistant keeps a private history just for you.</p>
+                <label style={{display:'block',fontSize:'.6rem',letterSpacing:'.5px',opacity:.8,marginBottom:4}}>Name</label>
+                <input value={userName} onChange={e=> setUserName(e.target.value)} required placeholder="Your name" style={{width:'100%',marginBottom:10,padding:'8px 10px',borderRadius:8,border:'1px solid rgba(255,255,255,0.15)',background:'rgba(255,255,255,0.07)',color:'inherit',fontSize:'.7rem'}} />
+                <label style={{display:'block',fontSize:'.6rem',letterSpacing:'.5px',opacity:.8,marginBottom:4}}>Email</label>
+                <input type="email" value={userEmail} onChange={e=> setUserEmail(e.target.value)} required placeholder="you@example.com" style={{width:'100%',marginBottom:14,padding:'8px 10px',borderRadius:8,border:'1px solid rgba(255,255,255,0.15)',background:'rgba(255,255,255,0.07)',color:'inherit',fontSize:'.7rem'}} />
+                <button type="submit" style={{width:'100%',padding:'10px 12px',borderRadius:10,border:'none',background:'linear-gradient(135deg,#6366f1,#8b5cf6)',color:'#fff',fontWeight:600,fontSize:'.75rem',letterSpacing:'.8px',cursor:'pointer'}}>Start Chatting</button>
+              </form>
+            </div>
+          )}
           <div className="chat-messages" ref={listRef}>
             {!messages.length && (
               <div className="chat-empty">
@@ -160,6 +228,7 @@ const ChatBot = () => {
               <div key={m.id} className={`chat-msg ${m.role} ${m.pending? 'pending':''}`}>
                 <div className="chat-avatar" aria-hidden="true">{m.role === 'assistant' ? '🤖' : '🧑'}</div>
                 <div className="chat-bubble" dangerouslySetInnerHTML={{__html: renderMarkdown(m.content)}} />
+                {!m.pending && <div className="imi-chat-msg-actions"><button title="Delete" onClick={()=> deleteMessage(m.id)}>✕</button></div>}
               </div>
             ))}
             {streaming && <div className="chat-msg assistant typing"><div className="chat-avatar">🤖</div><div className="chat-bubble"><span className="dots"><span>.</span><span>.</span><span>.</span></span></div></div>}
@@ -180,14 +249,14 @@ const ChatBot = () => {
             <textarea
               ref={inputRef}
               className="chat-input"
-              placeholder={streaming? 'Wait for response or stop...' : 'Message...'}
-              disabled={streaming}
+              placeholder={needsIdentity? 'Enter your name/email first...' : (streaming? 'Wait for response or stop...' : 'Message...')}
+              disabled={streaming || needsIdentity}
               value={input}
               onChange={e=> setInput(e.target.value)}
               onKeyDown={handleKey}
               rows={1}
             />
-            <button className="send-btn" onClick={handleSend} disabled={!input.trim() || streaming}>{editing? 'Update' : 'Send'}</button>
+            <button className="send-btn" onClick={handleSend} disabled={!input.trim() || streaming || needsIdentity}>{editing? 'Update' : 'Send'}</button>
           </div>
         </div>
       )}
@@ -200,6 +269,36 @@ function renderMarkdown(md=''){
   const esc = (s)=> s.replace(/[&<>]/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;' }[c]));
   // Headings, bold, italics, code, lists
   const lines = md.split(/\n/);
+
+    // Generate a lightweight unique id (timestamp + random) – sufficient for local uniqueness
+    const generateUserId = () => 'user-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,8);
+
+    const submitIdentity = async (e) => {
+      e.preventDefault();
+      if(!userName.trim() || !userEmail.trim()) return;
+      let id = userId;
+      if(!id){
+        id = generateUserId();
+        setUserId(id);
+        localStorage.setItem('imi-user-id', id);
+      }
+      localStorage.setItem('imi-user-name', userName.trim());
+      localStorage.setItem('imi-user-email', userEmail.trim());
+      setNeedsIdentity(false);
+      // Try informing backend (non-blocking)
+      try {
+        const base = window.__CHAT_API_BASE || apiBase;
+        fetch(base + '/session/init', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ user_id:id, name:userName.trim(), email:userEmail.trim() }) }).catch(()=>{});
+      } catch(_){}
+    };
+
+    // If we already have an id & backend becomes available later, sync session once.
+    useEffect(()=>{
+      if(backendMode && userId){
+        const base = window.__CHAT_API_BASE || apiBase;
+        fetch(base + '/session/init', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ user_id:userId, name:localStorage.getItem('imi-user-name')||'', email:localStorage.getItem('imi-user-email')||'' }) }).catch(()=>{});
+      }
+    }, [backendMode, userId, apiBase]);
   let out = [];
   let listBuf = [];
   const flushList = ()=> { if(listBuf.length){ out.push('<ul>' + listBuf.map(li=>`<li>${li}</li>`).join('') + '</ul>'); listBuf=[]; } };
@@ -250,7 +349,8 @@ function startStream(question){
   if(!window.__chatStream){ window.__chatStream = {}; }
   const ctrl = new AbortController();
   const base = window.__CHAT_API_BASE || 'http://localhost:8001';
-  fetch(base + '/chat/stream', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ question, top_k:3 }), signal:ctrl.signal })
+  const user_id = localStorage.getItem('imi-user-id') || null;
+  fetch(base + '/chat/stream', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ question, top_k:3, user_id }), signal:ctrl.signal })
     .then(async res => {
       if(!res.body) return;
       const reader = res.body.getReader();

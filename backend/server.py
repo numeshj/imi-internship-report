@@ -4,6 +4,7 @@ from fastapi import FastAPI, HTTPException, Response
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+import hashlib
 from sklearn.metrics.pairwise import cosine_similarity
 from rapidfuzz import fuzz
 import numpy as np
@@ -16,6 +17,11 @@ class Query(BaseModel):
     question: str
     top_k: int = 1
     threshold: float = 0.15
+    user_id: str | None = None
+
+class SessionInit(BaseModel):
+    name: str
+    email: str
 
 app = FastAPI(title="Internship Chatbot API", version="0.2.0")
 
@@ -28,6 +34,7 @@ app.add_middleware(
 )
 
 _cache = None
+_user_sessions: dict[str, dict] = {}
 
 def load_model():
     global _cache
@@ -41,6 +48,21 @@ def load_model():
 @app.get('/health')
 async def health():
     return { 'status': 'ok' }
+
+@app.post('/session/init')
+async def session_init(payload: SessionInit):
+    # Simple deterministic user id from email
+    email_norm = payload.email.strip().lower()
+    if not email_norm:
+        raise HTTPException(status_code=400, detail='Email required')
+    user_id = hashlib.sha256(email_norm.encode()).hexdigest()[:16]
+    if user_id not in _user_sessions:
+        _user_sessions[user_id] = {
+            'name': payload.name.strip() or 'User',
+            'email': email_norm,
+            'history': []  # list of {q,a,score,time}
+        }
+    return { 'user_id': user_id, 'name': _user_sessions[user_id]['name'] }
 
 def build_results(question: str, top_k: int, threshold: float):
     data = load_model()
@@ -80,6 +102,14 @@ async def chat(q: Query):
     best = results[0]
     # Markdown now excludes sources; UI will render sources separately from results list
     md = f"**Answer:** {best['answer']}\n\n**Confidence:** {best['score']:.2f}"
+    # Record history per user if provided
+    if q.user_id and q.user_id in _user_sessions:
+        _user_sessions[q.user_id]['history'].append({
+            'q': q.question,
+            'a': best['answer'],
+            'score': best['score'],
+            't': time.time()
+        })
     return { 'answer': best['answer'], 'results': results, 'markdown': md }
 
 @app.post('/chat/stream')
@@ -95,6 +125,14 @@ async def chat_stream(q: Query):
     sources = [ { 'question': r['canonical'], 'score': r['score'] } for r in results ]
 
     def token_stream():
+        # Log once before tokens
+        if q.user_id and q.user_id in _user_sessions:
+            _user_sessions[q.user_id]['history'].append({
+                'q': q.question,
+                'a': '',
+                'score': best['score'],
+                't': time.time()
+            })
         yield 'data: ' + json.dumps({'event':'meta','sources':sources,'confidence':best['score']}) + '\n\n'
         tokens = answer.split()
         buf = ''
@@ -102,6 +140,11 @@ async def chat_stream(q: Query):
             buf += (t + ' ')
             time.sleep(0.03)
             yield 'data: ' + json.dumps({'event':'token','text':t + ' '}) + '\n\n'
+        # Update final answer in history
+        if q.user_id and q.user_id in _user_sessions:
+            hist = _user_sessions[q.user_id]['history']
+            if hist:
+                hist[-1]['a'] = answer
         yield 'data: ' + json.dumps({'event':'done'}) + '\n\n'
 
     return StreamingResponse(token_stream(), media_type='text/event-stream')
