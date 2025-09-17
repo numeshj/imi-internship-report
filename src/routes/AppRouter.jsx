@@ -9,7 +9,7 @@ import TechnologiesPage from '../pages/TechnologiesPage';
 import PatternsPage from '../pages/PatternsPage';
 
 const AppRouter = () => (
-  <BrowserRouter>
+  <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
     <Routes>
       <Route element={<Layout />}> {/* persistent nav + theme */}
         <Route path="/" element={<Dashboard />} />

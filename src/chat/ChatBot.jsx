@@ -77,6 +77,41 @@ const ChatBot = () => {
   const listRef = useRef(null);
   const inputRef = useRef(null);
 
+  /* ---- Identity & Session Handling ---- */
+  const generateUserId = () => 'user-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,8);
+  const submitIdentity = async (e) => {
+    e.preventDefault();
+    if(!userName.trim() || !userEmail.trim()) return;
+    let id = userId;
+    if(!id){
+      id = generateUserId();
+      setUserId(id);
+      localStorage.setItem('imi-user-id', id);
+    }
+    localStorage.setItem('imi-user-name', userName.trim());
+    localStorage.setItem('imi-user-email', userEmail.trim());
+    setNeedsIdentity(false);
+    try {
+      const base = window.__CHAT_API_BASE || apiBase;
+      const res = await fetch(base + '/session/init', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name:userName.trim(), email:userEmail.trim() }) });
+      if(res.ok){
+        const data = await res.json();
+        if(data.user_id){
+          setUserId(data.user_id);
+          localStorage.setItem('imi-user-id', data.user_id);
+        }
+      }
+    } catch(_){}
+  };
+
+  // If backend becomes available later and we already have identity, sync once
+  useEffect(()=>{
+    if(backendMode && userId && !needsIdentity){
+      const base = window.__CHAT_API_BASE || apiBase;
+      fetch(base + '/session/init', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name:localStorage.getItem('imi-user-name')||'', email:localStorage.getItem('imi-user-email')||'' }) }).catch(()=>{});
+    }
+  }, [backendMode, userId, needsIdentity, apiBase]);
+
   useEffect(()=>{
     if(open && inputRef.current) inputRef.current.focus();
   }, [open]);
@@ -158,7 +193,14 @@ const ChatBot = () => {
           <div className="chat-messages" ref={listRef}>
             {!messages.length && (
               <div className="chat-empty">
-                <p><strong>Hi!</strong> I'm the local internship assistant. Ask about assignments, patterns or tech.<br/>Try: <code>/help</code>, <code>/summary</code>, <code>/asg 29</code>, <code>/pattern shuffle</code></p>
+                <p><strong>Hello! 👋</strong> I'm your internship assistant. I can help you with:</p>
+                <ul style={{margin: '8px 0', paddingLeft: '20px'}}>
+                  <li>Assignment details: <code>/asg 29</code></li>
+                  <li>Technology info: <code>/tech react</code></li>
+                  <li>Design patterns: <code>/pattern singleton</code></li>
+                  <li>Project summary: <code>/summary</code></li>
+                </ul>
+                <p>Just type a question or use the commands above!</p>
               </div>
             )}
             {messages.map(m => (
@@ -194,6 +236,19 @@ const ChatBot = () => {
             />
             <button className="send-btn" onClick={handleSend} disabled={!input.trim() || streaming}>{editing? 'Update' : 'Send'}</button>
           </div>
+          {needsIdentity && (
+            <div style={{position:'absolute',inset:0,backdropFilter:'blur(6px)',background:'rgba(0,0,0,0.55)',display:'flex',alignItems:'center',justifyContent:'center',padding:18,zIndex:50}}>
+              <form onSubmit={submitIdentity} style={{background:'var(--panel-bg,rgba(30,30,40,0.9))',border:'1px solid rgba(255,255,255,0.15)',borderRadius:14,padding:'18px 20px',width:'100%',maxWidth:360,color:'var(--text-color,#fff)',boxShadow:'0 4px 18px -4px rgba(0,0,0,0.6)'}}>
+                <h3 style={{margin:'0 0 12px',fontSize:'1.05rem',letterSpacing:'.5px'}}>Identify Yourself</h3>
+                <p style={{margin:'0 0 14px',fontSize:'.7rem',lineHeight:1.4,opacity:.85}}>Enter your name & email so the assistant keeps a private history just for you.</p>
+                <label style={{display:'block',fontSize:'.6rem',letterSpacing:'.5px',opacity:.8,marginBottom:4}}>Name</label>
+                <input value={userName} onChange={e=> setUserName(e.target.value)} required placeholder="Your name" style={{width:'100%',marginBottom:10,padding:'8px 10px',borderRadius:8,border:'1px solid rgba(255,255,255,0.15)',background:'rgba(255,255,255,0.07)',color:'inherit',fontSize:'.7rem'}} />
+                <label style={{display:'block',fontSize:'.6rem',letterSpacing:'.5px',opacity:.8,marginBottom:4}}>Email</label>
+                <input type="email" value={userEmail} onChange={e=> setUserEmail(e.target.value)} required placeholder="you@example.com" style={{width:'100%',marginBottom:14,padding:'8px 10px',borderRadius:8,border:'1px solid rgba(255,255,255,0.15)',background:'rgba(255,255,255,0.07)',color:'inherit',fontSize:'.7rem'}} />
+                <button type="submit" style={{width:'100%',padding:'10px 12px',borderRadius:10,border:'none',background:'linear-gradient(135deg,#6366f1,#8b5cf6)',color:'#fff',fontWeight:600,fontSize:'.75rem',letterSpacing:'.8px',cursor:'pointer'}}>Start Chatting</button>
+              </form>
+            </div>
+          )}
         </div>
       )}
     </>
@@ -205,43 +260,6 @@ function renderMarkdown(md=''){
   const esc = (s)=> s.replace(/[&<>]/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;' }[c]));
   // Headings, bold, italics, code, lists
   const lines = md.split(/\n/);
-
-    // Generate a lightweight unique id (timestamp + random) – sufficient for local uniqueness
-    const generateUserId = () => 'user-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,8);
-
-    const submitIdentity = async (e) => {
-      e.preventDefault();
-      if(!userName.trim() || !userEmail.trim()) return;
-      let id = userId;
-      if(!id){
-        id = generateUserId();
-        setUserId(id);
-        localStorage.setItem('imi-user-id', id);
-      }
-      localStorage.setItem('imi-user-name', userName.trim());
-      localStorage.setItem('imi-user-email', userEmail.trim());
-      setNeedsIdentity(false);
-      // Try informing backend (non-blocking)
-      try {
-        const base = window.__CHAT_API_BASE || apiBase;
-        const res = await fetch(base + '/session/init', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name:userName.trim(), email:userEmail.trim() }) });
-        if(res.ok){
-          const data = await res.json();
-          if(data.user_id){
-            setUserId(data.user_id);
-            localStorage.setItem('imi-user-id', data.user_id);
-          }
-        }
-      } catch(_){}
-    };
-
-    // If we already have an id & backend becomes available later, sync session once.
-    useEffect(()=>{
-      if(backendMode && userId){
-        const base = window.__CHAT_API_BASE || apiBase;
-        fetch(base + '/session/init', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ user_id:userId, name:localStorage.getItem('imi-user-name')||'', email:localStorage.getItem('imi-user-email')||'' }) }).catch(()=>{});
-      }
-    }, [backendMode, userId, apiBase]);
   let out = [];
   let listBuf = [];
   const flushList = ()=> { if(listBuf.length){ out.push('<ul>' + listBuf.map(li=>`<li>${li}</li>`).join('') + '</ul>'); listBuf=[]; } };
@@ -276,19 +294,6 @@ function endDrag(){
 function onResize(e){
   if(!window.__chatResize) return;
   const { node, startX, startY, w, h } = window.__chatResize;
-            {needsIdentity && (
-              <div style={{position:'absolute',inset:0,backdropFilter:'blur(6px)',background:'rgba(0,0,0,0.55)',display:'flex',alignItems:'center',justifyContent:'center',padding:18,zIndex:50}}>
-                <form onSubmit={submitIdentity} style={{background:'var(--panel-bg,rgba(30,30,40,0.9))',border:'1px solid rgba(255,255,255,0.15)',borderRadius:14,padding:'18px 20px',width:'100%',maxWidth:360,color:'var(--text-color,#fff)',boxShadow:'0 4px 18px -4px rgba(0,0,0,0.6)'}}>
-                  <h3 style={{margin:'0 0 12px',fontSize:'1.05rem',letterSpacing:'.5px'}}>Identify Yourself</h3>
-                  <p style={{margin:'0 0 14px',fontSize:'.7rem',lineHeight:1.4,opacity:.85}}>Enter your name & email so the assistant keeps a private history just for you.</p>
-                  <label style={{display:'block',fontSize:'.6rem',letterSpacing:'.5px',opacity:.8,marginBottom:4}}>Name</label>
-                  <input value={userName} onChange={e=> setUserName(e.target.value)} required placeholder="Your name" style={{width:'100%',marginBottom:10,padding:'8px 10px',borderRadius:8,border:'1px solid rgba(255,255,255,0.15)',background:'rgba(255,255,255,0.07)',color:'inherit',fontSize:'.7rem'}} />
-                  <label style={{display:'block',fontSize:'.6rem',letterSpacing:'.5px',opacity:.8,marginBottom:4}}>Email</label>
-                  <input type="email" value={userEmail} onChange={e=> setUserEmail(e.target.value)} required placeholder="you@example.com" style={{width:'100%',marginBottom:14,padding:'8px 10px',borderRadius:8,border:'1px solid rgba(255,255,255,0.15)',background:'rgba(255,255,255,0.07)',color:'inherit',fontSize:'.7rem'}} />
-                  <button type="submit" style={{width:'100%',padding:'10px 12px',borderRadius:10,border:'none',background:'linear-gradient(135deg,#6366f1,#8b5cf6)',color:'#fff',fontWeight:600,fontSize:'.75rem',letterSpacing:'.8px',cursor:'pointer'}}>Start Chatting</button>
-                </form>
-              </div>
-            )}
   const dx = e.clientX - startX; const dy = e.clientY - startY;
   node.style.width = Math.max(300, w + dx) + 'px';
   node.style.height = Math.max(320, h + dy) + 'px';
